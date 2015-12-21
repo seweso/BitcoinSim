@@ -37,7 +37,7 @@ namespace BitcoinSim
             if (rand.NextDouble() > (HashingPower/system.Dificulty))
                 return false;
 
-            system.CleanMempool();
+            system.MemPool.CleanMempool(system.CurrentTick);
 
             // Create a block
             var block = new List<Transaction>();
@@ -49,10 +49,10 @@ namespace BitcoinSim
                 if (i >= SoftLimit)
                     break;
 
-                if (i >= system.MemPool.Count)
+                if (i >= system.MemPool.Transactions.Count)
                     break; 
 
-                Transaction t = system.MemPool[i++];
+                Transaction t = system.MemPool.Transactions[i++];
                 totalFees += t.Fees;
 
                 // Enough transactions?

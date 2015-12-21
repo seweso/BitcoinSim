@@ -9,24 +9,18 @@ namespace BitcoinSim
     public class Bitcoin
     {
         public const int HardLimit = 1000;
-        public const int MaxMempoolSize = 100000;
 
         private readonly List<Block> _blocks = new List<Block>();
-        private readonly List<Transaction> _memPool = new List<Transaction>();
-        private readonly List<Transaction> _removed = new List<Transaction>();
 
         private IDictionary<int, int> _currentFeeEstimates = null;
 
         private List<Miner> _miners = new List<Miner>();
 
-        private List<UseCase> _useCases = new List<UseCase>();
+        private readonly List<UseCase> _useCases = new List<UseCase>();
 
-        private int CurrentTick { get; set; }
+        private readonly MemPool _memPool = new MemPool();
 
-        public IReadOnlyList<Transaction> MemPool
-        {
-            get { return _memPool; }
-        }
+        public int CurrentTick { get; set; }
 
         public Bitcoin()
         {
@@ -38,31 +32,9 @@ namespace BitcoinSim
         /// </summary>
         public double Dificulty { get; set; }
 
-
-        public void AddTransaction(Transaction t)
+        public MemPool MemPool
         {
-            t.AddedInMempoolTick = CurrentTick;
-            t.AddedInMemPoolHeight = _blocks.Count;
-
-            _memPool.Add(t);
-        }
-
-        public void CleanMempool()
-        {
-            _memPool.Sort((x, y) => y.Fees.CompareTo(x.Fees));
-
-            // Drop transactions above MaxMempoolSize
-            if (_memPool.Count > MaxMempoolSize)
-            {
-                List<Transaction> removed = _memPool.GetRange(MaxMempoolSize, _memPool.Count - MaxMempoolSize);
-                _removed.AddRange(removed);
-                
-                foreach (Transaction removedTransaction in removed)
-                {
-                    removedTransaction.RemoveFromMempool = CurrentTick;
-                    _memPool.Remove(removedTransaction);
-                }
-            }
+            get { return _memPool; }
         }
 
 
@@ -88,12 +60,12 @@ namespace BitcoinSim
             // Calculate average block size of last 100 blocks
             var average = AverageBlockSize(100);
 
-            int lookAt = (int)Math.Min(_memPool.Count - 1, average * (confirmationSpeedNeeded + 0.5));
+            int lookAt = (int)Math.Min(_memPool.Transactions.Count - 1, average * (confirmationSpeedNeeded + 0.5));
 
             if (lookAt < 0)
                 return 0;
 
-            return _memPool[lookAt].Fees;
+            return _memPool.Transactions[lookAt].Fees;
         }
 
         private double AverageBlockSize(int nrOfBlocks)
@@ -175,23 +147,31 @@ namespace BitcoinSim
         }
 
 
+        public void AddTransaction(Transaction t)
+        {
+            t.AddedInMempoolTick = CurrentTick;
+            t.AddedInMemPoolHeight = _blocks.Count;
+
+            _memPool.AddTransaction(t);
+        }
+
+
         public void AddBlock(Block block)
         {
             block.Height = _blocks.Count;
             block.MinedAtTick = CurrentTick;
 
             //Remove transactions from mempool
+            _memPool.RemoveTransactions(block.Transactions);
+
+            // Set confirmed in block (for easy navigation)
             foreach (Transaction t in block.Transactions)
-            {
                 t.ConfirmedInBlock = block;
-                _memPool.Remove(t);
-            }
 
             _blocks.Add(block);
 
             // Removed uses cases
-            string sRemovedUseCases = _removed.GroupBy(t => t.UseCase).Aggregate("", (current, @group) => current + String.Format("{0}={1},", @group.Key.MaxFees, @group.Count()));
-            _removed.Clear();
+            string sRemovedUseCases = _memPool.GetAndClearRemoved().GroupBy(t => t.UseCase).Aggregate("", (current, @group) => current + String.Format("{0}={1},", @group.Key.MaxFees, @group.Count()));
 
             // Fee statistics from block
             string blockFees = "emtpy block";
@@ -200,7 +180,7 @@ namespace BitcoinSim
                 blockFees = String.Format("Max fee: {0}, Min fee: {1}, Average fees: {2}, Total fees: {3}", block.Transactions.First().Fees, block.Transactions.Last().Fees, block.Transactions.Average(t => t.Fees), block.Transactions.Sum(t => t.Fees));
             
             // Print block staticics
-            Debug.Print("Miner: {0}, Height: {1}, Est 1: {6}, Est 2: {7}, Est 3: {8}, Est 4: {9}, Est 5: {10}, Est 6: {11}, Difficulty: {12}, Transactions: {2}, Mempool: {3}, Block fees: {5}, Removed use cases: ({4})", block.Origin.Name, block.Height, block.Transactions.Count, MemPool.Count, sRemovedUseCases, blockFees, _currentFeeEstimates[1], _currentFeeEstimates[2], _currentFeeEstimates[3], _currentFeeEstimates[4], _currentFeeEstimates[5], _currentFeeEstimates[6], Dificulty);
+            Debug.Print("Miner: {0}, Height: {1}, Est 1: {6}, Est 2: {7}, Est 3: {8}, Est 4: {9}, Est 5: {10}, Est 6: {11}, Difficulty: {12}, Transactions: {2}, Mempool: {3}, Block fees: {5}, Removed use cases: ({4})", block.Origin.Name, block.Height, block.Transactions.Count, _memPool.Transactions.Count, sRemovedUseCases, blockFees, _currentFeeEstimates[1], _currentFeeEstimates[2], _currentFeeEstimates[3], _currentFeeEstimates[4], _currentFeeEstimates[5], _currentFeeEstimates[6], Dificulty);
         }
 
         public void ReplaceMiners(List<Miner> miners)
@@ -241,6 +221,11 @@ namespace BitcoinSim
         private void StoreFeeEstimation()
         {
             _currentFeeEstimates = CalculateFeesPerConfirmationTime(GetTransactions(100), 20, 0.0001);
+        }
+
+        public void CleanMempool()
+        {
+            _memPool.CleanMempool(CurrentTick);
         }
     }
 }
