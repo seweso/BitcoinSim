@@ -47,7 +47,7 @@ namespace BitcoinSim
             _memPool.Add(t);
         }
 
-        private void CleanMempool()
+        public void CleanMempool()
         {
             _memPool.Sort((x, y) => y.Fees.CompareTo(x.Fees));
 
@@ -230,8 +230,6 @@ namespace BitcoinSim
                     // Found a block
 
                     StoreFeeEstimation();
-
-                    CleanMempool();
 
                     Dificulty *= 1.001;
 

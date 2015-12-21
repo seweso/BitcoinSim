@@ -37,6 +37,8 @@ namespace BitcoinSim
             if (rand.NextDouble() > (HashingPower/system.Dificulty))
                 return false;
 
+            system.CleanMempool();
+
             // Create a block
             var block = new List<Transaction>();
             int totalFees = 0; 
