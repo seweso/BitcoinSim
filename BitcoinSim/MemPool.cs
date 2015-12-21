@@ -1,18 +1,24 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace BitcoinSim
 {
     public class MemPool
     {
-        private const int MaxMempoolSize = 100000;
+        public int MaxMempoolSize { get; set; }
 
         private List<Transaction> _removed = new List<Transaction>();
-        private readonly List<Transaction> _memPool = new List<Transaction>();
+        private SortedSet<Transaction> _memPool = new SortedSet<Transaction>(Transaction.TransactionComparerInstance);
 
-        
+
+        public MemPool()
+        {
+            MaxMempoolSize = 100000;
+        }
+
         public IReadOnlyList<Transaction> Transactions
         {
-            get { return _memPool; }
+            get { return _memPool.ToList(); }
         }
 
         public IEnumerable<Transaction> GetAndClearRemoved()
@@ -29,19 +35,24 @@ namespace BitcoinSim
 
         public void CleanMempool(int currentTick)
         {
-            _memPool.Sort((x, y) => y.Fees.CompareTo(x.Fees));
-
             // Drop transactions above MaxMempoolSize
             if (_memPool.Count > MaxMempoolSize)
             {
-                List<Transaction> removed = _memPool.GetRange(MaxMempoolSize, _memPool.Count - MaxMempoolSize);
-                _removed.AddRange(removed);
-                
-                foreach (Transaction removedTransaction in removed)
+                var newMempool = new SortedSet<Transaction>(Transaction.TransactionComparerInstance);
+                int i = 0;
+                foreach (var t in _memPool)
                 {
-                    removedTransaction.RemoveFromMempool = currentTick;
-                    _memPool.Remove(removedTransaction);
+                    if (++i <= MaxMempoolSize)
+                    {
+                        newMempool.Add(t);
+                    }
+                    else
+                    {
+                        t.RemoveFromMempool = currentTick;
+                        _removed.Add(t);
+                    }
                 }
+                _memPool = newMempool;
             }
         }
 
