@@ -54,19 +54,10 @@ namespace BitcoinSim
             return _currentFeeEstimates[confirmationSpeedNeeded];
         }
         
-        private IEnumerable<Transaction> GetTransactions(int nrOfBlocks)
+        private IEnumerable<Block> GetLastBlocks(int nrOfBlocks)
         {
             int count = Math.Min(nrOfBlocks, _blocks.Count);
-
-            var result = new List<Transaction>();
-            if (count == 0)
-                return result;
-
-            foreach (var block in _blocks.GetRange(_blocks.Count - count, count))
-            {
-                result.AddRange(block.Transactions);
-            }
-            return result;
+            return count == 0 ? new List<Block>() : _blocks.GetRange(_blocks.Count - count, count);
         }
 
 
@@ -77,13 +68,13 @@ namespace BitcoinSim
         /// <param name="maxConfirmations"></param>
         /// <param name="percentageDeviationAllowed"></param>
         /// <returns></returns>
-        public static IDictionary<int, int> CalculateFeesPerConfirmationTime(IEnumerable<Transaction> list, int maxConfirmations, double percentageDeviationAllowed)
+        public static IDictionary<int, int> CalculateFeesPerConfirmationTime(IEnumerable<Block> list, int maxConfirmations, double percentageDeviationAllowed)
         {
             // Count all confirmation / fee combinations 
-            var grouped = list.GroupBy(t => new { t.ConfirmationTime, t.Fees }).ToList();
+            var grouped = list.SelectMany(b => b.ConfirmationsPerFee).ToList();
 
             // Grab all distinct fees
-            var distinctFees = grouped.Select(g => g.Key.Fees).Distinct().OrderByDescending(k => k).ToList();
+            var distinctFees = grouped.Select(g => g.Fees).Distinct().OrderByDescending(k => k).ToList();
 
             // No transactions / fees
             if (distinctFees.Count == 0)
@@ -105,8 +96,8 @@ namespace BitcoinSim
                 // Calculate percentage (per confirmation/fee combination
                 foreach (int fee in distinctFees)
                 {
-                    double theBad = grouped.Where(g => g.Key.ConfirmationTime > conf && g.Key.Fees >= fee).Sum(g => g.Count());
-                    double theGood = grouped.Where(g => g.Key.ConfirmationTime <= conf && g.Key.Fees <= fee).Sum(g => g.Count());
+                    double theBad = grouped.Where(g => g.ConfirmationTime > conf && g.Fees >= fee).Sum(g => g.Count);
+                    double theGood = grouped.Where(g => g.ConfirmationTime <= conf && g.Fees <= fee).Sum(g => g.Count);
 
                     double percentage = theGood/(theBad + theGood);
                     maxPercentage = Math.Max(maxPercentage, percentage - percentageDeviationAllowed);
@@ -155,7 +146,7 @@ namespace BitcoinSim
                 blockFees = String.Format("Max fee: {0}, Min fee: {1}, Average fees: {2}, Total fees: {3}", block.Transactions.First().Fees, block.Transactions.Last().Fees, block.Transactions.Average(t => t.Fees), block.Transactions.Sum(t => t.Fees));
             
             // Print block staticics
-            Debug.Print("Miner: {0}, Height: {1}, Est 1: {6}, Est 2: {7}, Est 3: {8}, Est 4: {9}, Est 5: {10}, Est 6: {11}, Difficulty: {12}, Transactions: {2}, Mempool: {3}, Block fees: {5}, Removed use cases: ({4})", block.Origin.Name, block.Height, block.Transactions.Count, _memPool.Size, sRemovedUseCases, blockFees, _currentFeeEstimates[1], _currentFeeEstimates[2], _currentFeeEstimates[3], _currentFeeEstimates[4], _currentFeeEstimates[5], _currentFeeEstimates[6], Dificulty);
+            Debug.Print("Miner: {0}, Height: {1}, Est 1: {6}, Est 2: {7}, Est 3: {8}, Est 4: {9}, Est 5: {10}, Est 6: {11}, Est 20: {12}, Difficulty: {13}, Transactions: {2}, Mempool: {3}, Block fees: {5}, Removed use cases: ({4})", block.Origin.Name, block.Height, block.Transactions.Count, _memPool.Size, sRemovedUseCases, blockFees, _currentFeeEstimates[1], _currentFeeEstimates[2], _currentFeeEstimates[3], _currentFeeEstimates[4], _currentFeeEstimates[5], _currentFeeEstimates[6], _currentFeeEstimates[20], Dificulty);
         }
 
         public void ReplaceMiners(List<Miner> miners)
@@ -195,7 +186,7 @@ namespace BitcoinSim
 
         private void StoreFeeEstimation()
         {
-            _currentFeeEstimates = CalculateFeesPerConfirmationTime(GetTransactions(100), 20, 0.0001);
+            _currentFeeEstimates = CalculateFeesPerConfirmationTime(GetLastBlocks(100), 20, 0.0001);
         }
 
         public void CleanMempool()
