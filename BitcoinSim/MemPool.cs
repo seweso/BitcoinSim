@@ -1,14 +1,11 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 
 namespace BitcoinSim
 {
     public class MemPool
     {
-        public int MaxMempoolSize { get; set; }
-
-        private List<Transaction> _removed = new List<Transaction>();
         private SortedSet<Transaction> _memPool = new SortedSet<Transaction>(Transaction.TransactionComparerInstance);
+        private List<Transaction> _removed = new List<Transaction>();
 
 
         public MemPool()
@@ -16,14 +13,21 @@ namespace BitcoinSim
             MaxMempoolSize = 100000;
         }
 
-        public IReadOnlyList<Transaction> Transactions
+        public int MaxMempoolSize { get; set; }
+
+        public IEnumerable<Transaction> Transactions
         {
-            get { return _memPool.ToList(); }
+            get { return _memPool; }
+        }
+
+        public int Size
+        {
+            get { return _memPool.Count; }
         }
 
         public IEnumerable<Transaction> GetAndClearRemoved()
         {
-            var result = _removed;
+            List<Transaction> result = _removed;
             _removed = new List<Transaction>();
             return result;
         }
@@ -40,7 +44,7 @@ namespace BitcoinSim
             {
                 var newMempool = new SortedSet<Transaction>(Transaction.TransactionComparerInstance);
                 int i = 0;
-                foreach (var t in _memPool)
+                foreach (Transaction t in _memPool)
                 {
                     if (++i <= MaxMempoolSize)
                     {
@@ -58,7 +62,7 @@ namespace BitcoinSim
 
         public void RemoveTransactions(IEnumerable<Transaction> transactions)
         {
-            foreach(var t in transactions)
+            foreach (Transaction t in transactions)
                 _memPool.Remove(t);
         }
     }

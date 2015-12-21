@@ -42,21 +42,16 @@ namespace BitcoinSim
             // Create a block
             var block = new List<Transaction>();
             int totalFees = 0; 
-            int i = 0;
 
-            while (true)
+            foreach (var t in system.MemPool.Transactions)
             {
-                if (i >= SoftLimit)
+                if (block.Count >= SoftLimit)
                     break;
 
-                if (i >= system.MemPool.Transactions.Count)
-                    break; 
-
-                Transaction t = system.MemPool.Transactions[i++];
                 totalFees += t.Fees;
 
                 // Enough transactions?
-                if (Subsidize ? totalFees < (i*TransactionCost) : t.Fees < TransactionCost)
+                if (Subsidize ? totalFees < ((block.Count + 1) * TransactionCost) : t.Fees < TransactionCost)
                     break;
 
                 // Add to block

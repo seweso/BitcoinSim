@@ -53,32 +53,7 @@ namespace BitcoinSim
 
             return _currentFeeEstimates[confirmationSpeedNeeded];
         }
-
-
-        public int GetFeesViaMempool(int confirmationSpeedNeeded)
-        {
-            // Calculate average block size of last 100 blocks
-            var average = AverageBlockSize(100);
-
-            int lookAt = (int)Math.Min(_memPool.Transactions.Count - 1, average * (confirmationSpeedNeeded + 0.5));
-
-            if (lookAt < 0)
-                return 0;
-
-            return _memPool.Transactions[lookAt].Fees;
-        }
-
-        private double AverageBlockSize(int nrOfBlocks)
-        {
-            int count = Math.Min(nrOfBlocks, _blocks.Count);
-
-            if (count == 0)
-                return 0;
-
-            double average = _blocks.GetRange(_blocks.Count - count, count).Average(b => b.Transactions.Count);
-            return average;
-        }
-
+        
         private IEnumerable<Transaction> GetTransactions(int nrOfBlocks)
         {
             int count = Math.Min(nrOfBlocks, _blocks.Count);
@@ -180,7 +155,7 @@ namespace BitcoinSim
                 blockFees = String.Format("Max fee: {0}, Min fee: {1}, Average fees: {2}, Total fees: {3}", block.Transactions.First().Fees, block.Transactions.Last().Fees, block.Transactions.Average(t => t.Fees), block.Transactions.Sum(t => t.Fees));
             
             // Print block staticics
-            Debug.Print("Miner: {0}, Height: {1}, Est 1: {6}, Est 2: {7}, Est 3: {8}, Est 4: {9}, Est 5: {10}, Est 6: {11}, Difficulty: {12}, Transactions: {2}, Mempool: {3}, Block fees: {5}, Removed use cases: ({4})", block.Origin.Name, block.Height, block.Transactions.Count, _memPool.Transactions.Count, sRemovedUseCases, blockFees, _currentFeeEstimates[1], _currentFeeEstimates[2], _currentFeeEstimates[3], _currentFeeEstimates[4], _currentFeeEstimates[5], _currentFeeEstimates[6], Dificulty);
+            Debug.Print("Miner: {0}, Height: {1}, Est 1: {6}, Est 2: {7}, Est 3: {8}, Est 4: {9}, Est 5: {10}, Est 6: {11}, Difficulty: {12}, Transactions: {2}, Mempool: {3}, Block fees: {5}, Removed use cases: ({4})", block.Origin.Name, block.Height, block.Transactions.Count, _memPool.Size, sRemovedUseCases, blockFees, _currentFeeEstimates[1], _currentFeeEstimates[2], _currentFeeEstimates[3], _currentFeeEstimates[4], _currentFeeEstimates[5], _currentFeeEstimates[6], Dificulty);
         }
 
         public void ReplaceMiners(List<Miner> miners)
