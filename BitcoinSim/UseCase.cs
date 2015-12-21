@@ -33,7 +33,7 @@ namespace BitcoinSim
             if (rand.NextDouble() > TransactionsPerTick)
                 return;
 
-            int fees = (int) Math.Min(system.GetFees(ConfirmationSpeedNeeded) + Math.Max(1, MaxFees * 0.01), MaxFees);
+            int fees = Math.Min(system.GetFees(ConfirmationSpeedNeeded) + 1, MaxFees);
 
             system.AddTransaction(new Transaction
             {
