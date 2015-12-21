@@ -34,9 +34,9 @@ namespace BitcoinSim
                 new UseCase { TransactionsPerTick = 0.06, ConfirmationSpeedNeeded = 99, MaxFees = 5},
                 new UseCase { TransactionsPerTick = 0.05, ConfirmationSpeedNeeded = 7, MaxFees = 10},
                 new UseCase { TransactionsPerTick = 0.04, ConfirmationSpeedNeeded = 5, MaxFees = 20}, 
-                new UseCase { TransactionsPerTick = 0.03, ConfirmationSpeedNeeded = 4, MaxFees = 500}, 
-                new UseCase { TransactionsPerTick = 0.02, ConfirmationSpeedNeeded = 3, MaxFees = 1000}, 
-                new UseCase { TransactionsPerTick = 0.01, ConfirmationSpeedNeeded = 3, MaxFees = 2000},
+                new UseCase { TransactionsPerTick = 0.03, ConfirmationSpeedNeeded = 4, MaxFees = 30}, 
+                new UseCase { TransactionsPerTick = 0.02, ConfirmationSpeedNeeded = 3, MaxFees = 100}, 
+                new UseCase { TransactionsPerTick = 0.01, ConfirmationSpeedNeeded = 2, MaxFees = 2000},
             });
 
             bitcoin.Tick();
